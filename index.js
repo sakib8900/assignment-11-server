@@ -1,68 +1,80 @@
-const express = require('express')
-const cors = require('cors')
+// server.js
+const express = require('express');
+const cors = require('cors');
 const app = express();
-require('dotenv').config()
-
-const port = process.env.PORT || 5000;
+require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
-app.use(cors())
-app.use(express.json())
+const port = process.env.PORT || 5000;
 
-
-
-
-
+app.use(cors());
+app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.3ermh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
 });
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    console.log("Successfully connected to MongoDB!");
 
-    // cars related apis
-    const carsCollection = client.db('carRent').collection('cars')
+    // Collections
+    const carsCollection = client.db('carRent').collection('cars');
+    const bookingsCollection = client.db('carRent').collection('bookings');
 
+    // Get all cars
     app.get('/cars', async (req, res) => {
-      const cursor = carsCollection.find()
-      const result = await cursor.toArray();
-      res.send(result)
-    })
-
-    // Details 
-    app.get('/cars/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await carsCollection.findOne(query);
-      res.send(result);
+      const cars = await carsCollection.find().toArray();
+      res.json(cars);
     });
 
+    // Get car by ID
+    app.get('/cars/:id', async (req, res) => {
+      const id = req.params.id;
+      const car = await carsCollection.findOne({ _id: new ObjectId(id) });
+      res.json(car);
+    });
 
-  } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
+    // Add a new booking
+    app.post('/bookings', async (req, res) => {
+      const booking = req.body;
+      const result = await bookingsCollection.insertOne(booking);
+      res.json(result);
+    });
+
+    // Get bookings by user ID
+    app.get('/bookings/:userId', async (req, res) => {
+      const userId = req.params.userId;
+      const bookings = await bookingsCollection.find({ userId }).toArray();
+      res.json(bookings);
+    });
+
+    // Cancel booking
+    app.delete('/bookings/:id', async (req, res) => {
+      const id = req.params.id;
+      const result = await bookingsCollection.deleteOne({ _id: new ObjectId(id) });
+      res.json(result);
+    });
+
+  } catch (error) {
+    console.error(error);
   }
 }
+
 run().catch(console.dir);
 
-
 app.get('/', (req, res) => {
-  res.send('Hello guys')
-})
+  res.send('Hello, your API is working!');
+});
 
 app.listen(port, () => {
-  console.log(`job is waiting at: ${port}`);
-})
+  console.log(`Server is running at http://localhost:${port}`);
+});
