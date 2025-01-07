@@ -49,12 +49,34 @@ async function run() {
       const result = await bookingsCollection.insertOne(booking);
       res.json(result);
     });
+    // Get all cars
+    app.get('/bookings', async (req, res) => {
+      const bookings = await bookingsCollection.find().toArray();
+      res.json(bookings);
+    });
+    // Add a new car 
+    app.post('/cars', async (req, res) => {
+      const car = req.body;
+      const result = await carsCollection.insertOne(car);
+      res.json(result);
+    });
+
 
     // Get bookings by user ID
     app.get('/bookings/:userId', async (req, res) => {
       const userId = req.params.userId;
       const bookings = await bookingsCollection.find({ userId }).toArray();
       res.json(bookings);
+    });
+    // Update booking dates
+    app.put('/bookings/:id', async (req, res) => {
+      const id = req.params.id;
+      const { startDateTime, endDateTime } = req.body;
+      const result = await bookingsCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { startDateTime, endDateTime } }
+      );
+      res.json(result);
     });
 
     // Cancel booking
@@ -72,7 +94,7 @@ async function run() {
 run().catch(console.dir);
 
 app.get('/', (req, res) => {
-  res.send('Hello, your API is working!');
+  res.send('Hello guys');
 });
 
 app.listen(port, () => {
