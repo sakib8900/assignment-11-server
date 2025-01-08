@@ -60,6 +60,24 @@ async function run() {
       const result = await carsCollection.insertOne(car);
       res.json(result);
     });
+    
+    // Update car details
+    app.put('/cars/:id', async (req, res) => {
+      const id = req.params.id;
+      const updates = req.body;
+      const result = await carsCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updates }
+      );
+      res.json(result);
+    });
+    // Delete car
+    app.delete('/cars/:id', async (req, res) => {
+      const id = req.params.id;
+      const result = await carsCollection.deleteOne({ _id: new ObjectId(id) });
+      res.json(result);
+    });
+
 
 
     // Get bookings by user ID
