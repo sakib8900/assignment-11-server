@@ -7,7 +7,14 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const port = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://assiengment-11.web.app',
+    'https://assiengment-11.firebaseapp.com'
+     ],
+  credentials: true
+}));
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.3ermh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -22,10 +29,8 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    // console.log("Successfully connected to MongoDB!");
     await client.connect();
-    await client.db("admin").command({ ping: 1 });
-    console.log("Successfully connected to MongoDB!");
-
     // Collections
     const carsCollection = client.db('carRent').collection('cars');
     const bookingsCollection = client.db('carRent').collection('bookings');
@@ -38,17 +43,28 @@ async function run() {
 
     // Get car by ID
     app.get('/cars/:id', async (req, res) => {
-      const id = req.params.id;
-      const car = await carsCollection.findOne({ _id: new ObjectId(id) });
-      res.json(car);
+      try {
+        const car = await carsCollection.findOne({ _id: new ObjectId(req.params.id) });
+        if (!car) {
+          return res.status(404).json({ error: "Car not found" });
+        }
+        res.json(car);
+      } catch (error) {
+        res.status(500).json({ error: "Internal Server Error" });
+      }
     });
-
     // Add a new booking
     app.post('/bookings', async (req, res) => {
       const booking = req.body;
       const result = await bookingsCollection.insertOne(booking);
+      if (result.insertedId) {
+        await carsCollection.updateOne(
+          { _id: new ObjectId(booking.carId) },
+          { $inc: { booking_count: 1 } } // Increment booking_count
+        );
+      }
       res.json(result);
-    });
+    });    
     // Get all cars
     app.get('/bookings', async (req, res) => {
       const bookings = await bookingsCollection.find().toArray();
@@ -60,7 +76,7 @@ async function run() {
       const result = await carsCollection.insertOne(car);
       res.json(result);
     });
-    
+
     // Update car details
     app.put('/cars/:id', async (req, res) => {
       const id = req.params.id;
@@ -77,9 +93,6 @@ async function run() {
       const result = await carsCollection.deleteOne({ _id: new ObjectId(id) });
       res.json(result);
     });
-
-
-
     // Get bookings by user ID
     app.get('/bookings/:userId', async (req, res) => {
       const userId = req.params.userId;
@@ -104,8 +117,9 @@ async function run() {
       res.json(result);
     });
 
-  } catch (error) {
-    console.error(error);
+  }
+  finally{
+    // await client.close();
   }
 }
 
