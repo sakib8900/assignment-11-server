@@ -29,8 +29,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // console.log("Successfully connected to MongoDB!");
-    await client.connect();
+    // await client.connect();
     // Collections
     const carsCollection = client.db('carRent').collection('cars');
     const bookingsCollection = client.db('carRent').collection('bookings');
@@ -60,7 +59,7 @@ async function run() {
       if (result.insertedId) {
         await carsCollection.updateOne(
           { _id: new ObjectId(booking.carId) },
-          { $inc: { booking_count: 1 } } // Increment booking_count
+          { $inc: { booking_count: 1 } }
         );
       }
       res.json(result);
